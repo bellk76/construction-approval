@@ -1,0 +1,65 @@
+:root {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  color: #1f2937;
+  background: #f3f4f6;
+}
+
+* { box-sizing: border-box; }
+
+body { margin: 0; }
+
+.container { max-width: 900px; margin: 0 auto; padding: 24px; }
+
+h1 { font-size: 22px; }
+h2 { font-size: 16px; margin: 0 0 12px; }
+
+.topbar {
+  display: flex; justify-content: space-between; align-items: center;
+  background: #1e3a5f; color: #fff; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px;
+}
+.topbar .muted { color: #cbd5e1; }
+
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+.card {
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
+  padding: 16px; margin-bottom: 16px;
+}
+
+label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #374151; margin-bottom: 10px; }
+
+input {
+  padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;
+}
+
+select {
+  padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: #fff;
+  min-width: 220px;
+}
+
+button {
+  padding: 8px 14px; border: none; border-radius: 6px; background: #2563eb; color: #fff;
+  font-size: 14px; cursor: pointer; margin-right: 8px;
+}
+button:disabled { background: #9ca3af; cursor: not-allowed; }
+button.danger { background: #dc2626; }
+
+.row { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 8px; border-bottom: 1px solid #e5e7eb; }
+.clickable { cursor: pointer; }
+.clickable:hover { background: #f9fafb; }
+tr.current { background: #eff6ff; }
+
+.muted { color: #6b7280; font-size: 12px; }
+.error { color: #b91c1c; }
+.notice { color: #065f46; background: #ecfdf5; padding: 10px; border-radius: 6px; }
+
+.badge { padding: 2px 8px; border-radius: 999px; font-size: 12px; }
+.badge-DRAFT { background: #e5e7eb; }
+.badge-ON_APPROVAL { background: #fef3c7; }
+.badge-APPROVED { background: #d1fae5; }
+.badge-REJECTED { background: #fee2e2; }
+
+code { background: #f3f4f6; padding: 1px 5px; border-radius: 4px; }

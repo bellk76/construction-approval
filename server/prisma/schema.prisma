@@ -1,0 +1,207 @@
+// Схема = единый источник истины (аналог config/struct/*.xml в fh).
+// Из неё Prisma генерирует SQL-миграции и типизированный клиент.
+// Для демо используем SQLite (Docker/PostgreSQL на машине нет).
+// Для продакшена: provider = "postgresql" + url на Postgres.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ======================= Аутентификация / доступ =======================
+
+model User {
+  id           Int      @id @default(autoincrement())
+  login        String   @unique
+  fullName     String
+  passwordHash String
+  active       Boolean  @default(true)
+  departmentId Int?
+  positionId   Int?
+  createdAt    DateTime @default(now())
+
+  department Department? @relation(fields: [departmentId], references: [id])
+  position   Position?   @relation(fields: [positionId], references: [id])
+
+  roles       UserRole[] // ручные исключения/надбавки к ролям должности
+  sessions    Session[]
+  memberships ProjectMember[]
+  authored    PurchaseRequest[] @relation("author")
+  approvals   ApprovalStep[]    @relation("approver")
+  auditLogs   AuditLog[]
+}
+
+// Оргструктура: роли привязаны к должности (аналог DepartmentPositionGroup в fh)
+model Department {
+  id   Int    @id @default(autoincrement())
+  code String @unique
+  name String
+
+  users User[]
+}
+
+model Position {
+  id   Int    @id @default(autoincrement())
+  code String @unique
+  name String
+
+  users         User[]
+  positionRoles PositionRole[]
+}
+
+model PositionRole {
+  positionId Int
+  roleId     Int
+  position   Position @relation(fields: [positionId], references: [id])
+  role       Role     @relation(fields: [roleId], references: [id])
+
+  @@id([positionId, roleId])
+}
+
+model Role {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique // admin | director | pto | supply | accountant | foreman
+  name      String
+  maxAmount Decimal? // лимит полномочий роли (AuthorityLimit)
+
+  users         UserRole[]
+  permissions   RolePermission[]
+  positionRoles PositionRole[]
+  approvalRules ApprovalRule[]
+  approvalSteps ApprovalStep[]
+}
+
+model Permission {
+  id   Int    @id @default(autoincrement())
+  code String @unique // document.approve | project.edit | register.view ...
+  name String
+
+  roles RolePermission[]
+}
+
+model UserRole {
+  userId Int
+  roleId Int
+  user   User @relation(fields: [userId], references: [id])
+  role   Role @relation(fields: [roleId], references: [id])
+
+  @@id([userId, roleId])
+}
+
+model RolePermission {
+  roleId       Int
+  permissionId Int
+  role         Role       @relation(fields: [roleId], references: [id])
+  permission   Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([roleId, permissionId])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    Int
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+// ======================= Справочники / объекты =======================
+
+model Contractor {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  requests PurchaseRequest[]
+}
+
+model Project {
+  id   Int    @id @default(autoincrement())
+  name String
+
+  members  ProjectMember[]
+  requests PurchaseRequest[]
+}
+
+model ProjectMember {
+  userId    Int
+  projectId Int
+  role      String
+  user      User    @relation(fields: [userId], references: [id])
+  project   Project @relation(fields: [projectId], references: [id])
+
+  @@id([userId, projectId])
+}
+
+// ======================= Согласование =======================
+
+// Правило маршрута: для типа документа и диапазона суммы — шаг и обязательная роль.
+model ApprovalRule {
+  id             Int      @id @default(autoincrement())
+  docType        String // PURCHASE | CONTRACT | ACT
+  minAmount      Decimal
+  maxAmount      Decimal? // null = без верхней границы
+  step           Int
+  requiredRoleId Int
+  dueDays        Int
+
+  requiredRole Role @relation(fields: [requiredRoleId], references: [id])
+
+  @@unique([docType, minAmount, maxAmount, step])
+}
+
+model PurchaseRequest {
+  id           Int      @id @default(autoincrement())
+  number       String   @unique
+  docType      String   @default("PURCHASE")
+  projectId    Int
+  contractorId Int
+  amount       Decimal
+  status       String   @default("DRAFT") // DRAFT | ON_APPROVAL | APPROVED | REJECTED
+  authorId     Int
+  version      Int      @default(1) // оптимистичная блокировка
+  rulesVersion String   @default("v1") // снимок версии правил
+  createdAt    DateTime @default(now())
+
+  project    Project      @relation(fields: [projectId], references: [id])
+  contractor Contractor   @relation(fields: [contractorId], references: [id])
+  author     User         @relation("author", fields: [authorId], references: [id])
+  steps      ApprovalStep[]
+  logs       AuditLog[]
+}
+
+model ApprovalStep {
+  id             Int       @id @default(autoincrement())
+  requestId      Int
+  order          Int
+  requiredRoleId Int
+  approverId     Int?
+  status         String    @default("PENDING") // PENDING | APPROVED | REJECTED | SKIPPED
+  dueAt          DateTime
+  decidedAt      DateTime?
+
+  request      PurchaseRequest @relation(fields: [requestId], references: [id])
+  requiredRole Role            @relation(fields: [requiredRoleId], references: [id])
+  approver     User?           @relation("approver", fields: [approverId], references: [id])
+
+  @@unique([requestId, order])
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  at        DateTime @default(now())
+  actorId   Int?
+  action    String
+  entity    String
+  entityId  Int
+  details   String?
+  requestId Int?
+
+  actor   User?            @relation(fields: [actorId], references: [id])
+  request PurchaseRequest? @relation(fields: [requestId], references: [id])
+}

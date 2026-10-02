@@ -1,0 +1,42 @@
+# Зависимости
+node_modules/
+.pnp
+.pnp.js
+
+# Сборка
+dist/
+build/
+*.tsbuildinfo
+
+# Окружение и секреты
+.env
+.env.local
+.env.*.local
+
+# База данных (пересоздаётся: prisma migrate + seed)
+server/prisma/dev.db
+server/prisma/dev.db-journal
+*.db
+
+# Логи
+*.log
+npm-debug.log*
+logs/
+
+# Прочее
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+
+# Чужой остаток, к проекту не относится
+n8n-demo/
+
+# Отклик и личные заметки
+docs/
+
+# Тестовые артефакты Playwright
+web/shots/video/
+web/test-results/
